@@ -1,18 +1,26 @@
 class Slider {
-    constructor({selector, images, direction = 'ltr', speed = 3.5, auto = true}) {
-        this.indexModifier    = direction.toLowerCase() === 'ltr' ? 1 : -1;
-        this.container        = document.querySelector(selector);
-        this.speed            = speed;
-        this.auto             = auto;
-        this.currentIndex     = 0;
-        this.containerClass   = Slider.className();
-        this.slideClass       = Slider.slideClassName();
-        this.activeSlideClass = Slider.activeSlideClassName();
+    constructor({selector, images, direction = 'ltr', speed = 3.5, auto = true, pager = true, color = '#09c'}) {
+        this.indexModifier = direction.toLowerCase() === 'ltr' ? 1 : -1;
+        this.container     = document.querySelector(selector);
+        this.speed         = speed;
+        this.auto          = auto;
+        this.currentIndex  = 0;
+        this.pager         = pager;
+        this.color         = color[0] === '#' ? color : `#${color}`;
+        this.inner         = document.createElement('div');
 
-        this.container.classList.add(this.containerClass);
+        this.inner.classList.add(Slider.innerClassName);
+        this.container.classList.add(Slider.className);
+        this.container.appendChild(this.inner);
         this.style(this.container, {
             position: pos => pos == 'static' ? 'relative' : pos
         });
+
+        if (this.pager) {
+            this.orbContainer = document.createElement('div');
+            this.orbContainer.classList.add(Slider.orbContainerClassName);
+            this.container.appendChild(this.orbContainer);
+        }
 
         images.forEach(url => {
             const img  = new Image();
@@ -22,33 +30,57 @@ class Slider {
     }
 
     // next transitions between current slide and next slide
-    next() {
-        let nextIndex = this.currentIndex + this.indexModifier;
+    next(index = NaN) {
+        let nextIndex  = !isNaN(index) ? index : this.currentIndex + this.indexModifier;
+        let slideCount = this.inner.children.length;
 
-        if (nextIndex >= this.container.children.length) nextIndex = 0;
-        if (nextIndex < 0) nextIndex = this.container.children.length - 1;
+        if (slideCount === 1) return;
+
+        if (nextIndex >= slideCount) nextIndex = 0;
+        if (nextIndex < 0) nextIndex = slideCount - 1;
+        clearTimeout(this.__timeout);
         if (this.auto) this.__timeout = setTimeout(this.next.bind(this), this.speed * 1000);
 
         // toggle classes off
-        document.querySelector(`.${this.activeSlideClass}`).classList.remove(this.activeSlideClass);
-        this.container.children[nextIndex].classList.add(this.activeSlideClass);
+        document.querySelector(`.${Slider.activeSlideClassName}`).classList.remove(Slider.activeSlideClassName);
+        this.inner.children[nextIndex].classList.add(Slider.activeSlideClassName);
+
+        if (this.orbContainer) {
+            document.querySelector(`.${Slider.activeOrbClassName}`).classList.remove(Slider.activeOrbClassName);
+            this.orbContainer.children[nextIndex].classList.add(Slider.activeOrbClassName);
+        }
 
         this.currentIndex = nextIndex;
     }
 
-    // insert an [Image img] into [Node this.container]
+    // insert an [Image img] into [Node this.inner]
     // as a [Node] with a background-image.
     insert(img) {
         // style and append a newly created div element
+        const first = this.inner.children.length === 0;
         const slide = this.style(document.createElement('div'), {
             backgroundImage: `url(${img.src})`
         });
 
-        slide.classList.add(this.slideClass);
-        this.container.appendChild(slide);
+        slide.classList.add(Slider.slideClassName);
+        this.inner.appendChild(slide);
 
-        if (this.container.children.length === 1) {
-            slide.classList.add(this.activeSlideClass);
+        if (this.orbContainer) {
+            const orb   = this.style(document.createElement('div'), {borderColor: this.color});
+            const inner = this.style(document.createElement('div'), {backgroundColor: this.color});
+            orb.onclick = this.next.bind(this, this.inner.children.length - 1);
+
+            orb.classList.add(Slider.orbClassName);
+            inner.classList.add(Slider.orbInnerClassName);
+            orb.appendChild(inner);
+            this.orbContainer.appendChild(orb);
+
+            setTimeout(() => orb.classList.add(Slider.loadedOrbClassName), 30);
+            if (first) setTimeout(() => orb.classList.add(Slider.activeOrbClassName), 10);
+        }
+
+        if (first) {
+            setTimeout(() => slide.classList.add(Slider.activeSlideClassName), 10);
             this.__timeout = setTimeout(this.next.bind(this), this.speed * 1000);
         }
     }
@@ -71,51 +103,151 @@ class Slider {
         return node;
     }
 
-    static className() {
+    static get innerClassName() {
+        if (this.__innerClassName) return this.__innerClassName;
+        return this.__innerClassName = `slider-${Date.now()}__inner`;
+    }
+
+    static get className() {
         if (this.__className) return this.__className;
         return this.__className = `slider-${Date.now()}`;
     }
 
-    static slideClassName() {
+    static get slideClassName() {
         if (this.__slideClassName) return this.__slideClassName;
-        return this.__slideClassName = `${this.className()}__slide`;
+        return this.__slideClassName = `${this.className}__slide`;
     }
 
-    static activeSlideClassName() {
+    static get orbContainerClassName() {
+        if (this.__orbContainerClassName) return this.__orbContainerClassName;
+        return this.__orbContainerClassName = `${this.className}__orbs`;
+    }
+
+    static get orbClassName() {
+        if (this.__orbClassName) return this.__orbClassName;
+        return this.__orbClassName = `${this.className}__orb`;
+    }
+
+    static get orbInnerClassName() {
+        if (this.__orbInnerClassName) return this.__orbInnerClassName;
+        return this.__orbInnerClassName = `${this.className}__orb-inner`;
+    }
+
+
+    static get activeOrbClassName() {
+        if (this.__activeOrbClassName) return this.__activeOrbClassName;
+        return this.__activeOrbClassName = `${this.orbClassName}--active`;
+    }
+
+    static get loadedOrbClassName() {
+        if (this.__loadedOrbClassName) return this.__loadedOrbClassName;
+        return this.__loadedOrbClassName = `${this.orbClassName}--loaded`;
+    }
+
+    static get activeSlideClassName() {
         if (this.__activeSlideClassName) return this.__activeSlideClassName;
-        return this.__activeSlideClassName = `${this.className()}__slide--active`;
+        return this.__activeSlideClassName = `${this.slideClassName}--active`;
     }
 
-    static stylesheetClassName() {
+    static get stylesheetClassName() {
         if (this.__stylesheetClassName) return this.__stylesheetClassName;
-        return this.__stylesheetClassName = `${this.className()}-stylesheet`;
+        return this.__stylesheetClassName = `${this.className}-stylesheet`;
     }
 
     static stylesheet() {
-        if (document.querySelector(`.${this.stylesheetClassName()}`)) return;
+        if (document.querySelector(`.${this.stylesheetClassName}`)) return;
 
         const css        = document.createElement('style');
-        css.classList.add(this.stylesheetClassName());
+        css.classList.add(this.stylesheetClassName);
         css.type         = 'text/css';
         css.innerText    = `
-            .${this.slideClassName()} {
+            .${this.slideClassName} {
+                position: absolute;
+                top:      0;
+                left:     0;
+                bottom:   0;
+                right:    0;
+
                 background-position: center;
                 background-size:     cover;
                 background-repeat:   no-repeat;
 
-                position: absolute;
-                top: 0;
-                left: 0;
-                bottom: 0;
-                right: 0;
-                opacity: 0;
+                opacity:    0;
                 transition: opacity 2s ease-in-out;
             }
 
-            .${this.activeSlideClassName()} {
+            .${this.innerClassName} {
+                position: absolute;
+                top:      0;
+                left:     0;
+                bottom:   0;
+                right:    0;
+                z-index:  10;
+            }
+
+            .${this.activeSlideClassName} {
                 opacity: 1;
             }
-        `.replace(/\n/g, ' ');
+
+            .${this.orbClassName} {
+                position: relative;
+
+                width:  1.5rem;
+                height: 1.5rem;
+
+                margin:        0 0.5rem;
+                border-radius: 100%;
+                opacity:       0.8;
+                border:        2px solid #222;
+                transition:    transform 0.5s ease-in-out;
+                transform:     scale(0);
+            }
+
+            .${this.orbClassName} .${this.orbInnerClassName} {
+                position:  absolute;
+                top:       50%;
+                left:      50%;
+                transform: translate3d(-50%, -50%, 0);
+
+                content: '';
+                display: block;
+                width:   calc(100% - 5px);
+                height:  calc(100% - 5px);
+
+                border-radius:    100%;
+                background-color: #222;
+                opacity:          0;
+                transition:       opacity 0.5s ease-in-out;
+            }
+
+            .${this.loadedOrbClassName} {
+                transform: scale(1);
+            }
+
+            .${this.activeOrbClassName} {
+                cursor:         pointer;
+                pointer-events: none;
+            }
+
+            .${this.activeOrbClassName} .${this.orbInnerClassName} {
+                opacity: 1;
+            }
+
+            .${this.orbContainerClassName} {
+                position: absolute;
+                left:     0;
+                bottom:   0.75rem;
+                z-index:  100;
+
+                width:  100%;
+                height: 1.5rem;
+
+                display:         flex;
+                flex-flow:       row nowrap;
+                align-items:     center;
+                justify-content: center;
+            }
+        `.replace(/[\s\n]+/g, ' ');
 
         document.querySelector('head').appendChild(css);
     }
