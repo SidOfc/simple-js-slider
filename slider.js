@@ -1,5 +1,5 @@
 class Slider {
-    constructor({selector, images, direction = 'ltr', speed = 3.5, auto = true, pager = true, color = '#09c', pagerOutside = false}) {
+    constructor({selector, images, direction = 'ltr', speed = 3.5, auto = true, pager = true, color = '#09c', pagerOutside = false, sync = false}) {
         this.indexModifier = direction.toLowerCase() === 'ltr' ? 1 : -1;
         this.container     = document.querySelector(selector);
         this.speed         = speed;
@@ -8,6 +8,7 @@ class Slider {
         this.color         = color[0] === '#' ? color : `#${color}`;
         this.inner         = document.createElement('div');
         this.pagerOutside  = pagerOutside;
+        this.sync          = sync;
 
         this.inner.classList.add(Slider.innerClassName);
         this.container.classList.add(Slider.className);
@@ -28,8 +29,12 @@ class Slider {
         images.forEach(settings => {
             const obj  = typeof settings === 'string' ? {url: settings} : settings;
             const img  = new Image();
-            img.onload = this.insert.bind(this, img, obj);
-            img.src    = obj.url;
+            if (this.sync) {
+                this.insert(img, obj);
+            } else {
+                img.onload = this.insert.bind(this, img, obj);
+            }
+            img.src = obj.url;
         });
     }
 
@@ -63,7 +68,7 @@ class Slider {
         // style and append a newly created div element
         const first = this.inner.children.length === 0;
         const slide = this.style(document.createElement('div'), {
-            backgroundImage: `url(${img.src})`,
+            backgroundImage: `url(${properties.url})`,
             backgroundSize:  properties.contain ? 'contain' : 'cover'
         });
 
@@ -77,8 +82,6 @@ class Slider {
                 boxShadow:       `0.4rem 0 0 ${this.color}, -0.4rem 0 0 ${this.color}`,
                 lineHeight:      '2'
             });
-
-            console.log(this.pagerOutside);
 
             const banner = this.style(document.createElement('div'), {
                 position:  'absolute',
