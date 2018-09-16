@@ -1,31 +1,35 @@
 class Slider {
-    constructor({selector, images, direction = 'ltr', speed = 3.5, auto = true, pager = true, color = '#09c'}) {
+    constructor({selector, images, direction = 'ltr', speed = 3.5, auto = true, pager = true, color = '#09c', pagerOutside = false}) {
         this.indexModifier = direction.toLowerCase() === 'ltr' ? 1 : -1;
         this.container     = document.querySelector(selector);
         this.speed         = speed;
         this.auto          = auto;
         this.currentIndex  = 0;
-        this.pager         = pager;
         this.color         = color[0] === '#' ? color : `#${color}`;
         this.inner         = document.createElement('div');
+        this.pagerOutside  = pagerOutside;
 
         this.inner.classList.add(Slider.innerClassName);
         this.container.classList.add(Slider.className);
         this.container.appendChild(this.inner);
         this.style(this.container, {
-            position: pos => pos == 'static' ? 'relative' : pos
+            position:     pos          => pos == 'static' ? 'relative' : pos,
+            marginBottom: marginBottom => pagerOutside    ? '3.5rem'   : marginBottom
         });
 
-        if (this.pager) {
-            this.orbContainer = document.createElement('div');
+        if (pager) {
+            this.orbContainer = this.style(document.createElement('div'), {
+                transform: transform => pagerOutside ? 'translate3d(0, calc(100% + 1.75rem), 0)' : transform
+            });
             this.orbContainer.classList.add(Slider.orbContainerClassName);
             this.container.appendChild(this.orbContainer);
         }
 
-        images.forEach(url => {
+        images.forEach(settings => {
+            const obj  = typeof settings === 'string' ? {url: settings} : settings;
             const img  = new Image();
-            img.onload = this.insert.bind(this, img);
-            img.src    = url;
+            img.onload = this.insert.bind(this, img, obj);
+            img.src    = obj.url;
         });
     }
 
@@ -55,19 +59,50 @@ class Slider {
 
     // insert an [Image img] into [Node this.inner]
     // as a [Node] with a background-image.
-    insert(img) {
+    insert(img, properties) {
         // style and append a newly created div element
         const first = this.inner.children.length === 0;
         const slide = this.style(document.createElement('div'), {
-            backgroundImage: `url(${img.src})`
+            backgroundImage: `url(${img.src})`,
+            backgroundSize:  properties.contain ? 'contain' : 'cover'
         });
+
+        if (properties.banner) {
+            const text = this.style(document.createElement('span'), {
+                padding:         '0.4rem 0',
+                backgroundColor: this.color,
+                color:           '#fff',
+                textTransform:   'uppercase',
+                fontSize:        '1.5rem',
+                boxShadow:       `0.4rem 0 0 ${this.color}, -0.4rem 0 0 ${this.color}`,
+                lineHeight:      '2'
+            });
+
+            console.log(this.pagerOutside);
+
+            const banner = this.style(document.createElement('div'), {
+                position:  'absolute',
+                bottom:    properties.banner.bottom ? (this.pagerOutside ? '0.9rem' : '3.15rem') : 'auto',
+                top:       properties.banner.bottom ? 'auto'    : '0.9rem',
+                right:     properties.banner.right  ? '1.4rem'  : 'auto',
+                left:      properties.banner.right  ? 'auto'    : '1.4rem',
+                textAlign: properties.banner.right  ? 'right'   : 'left',
+                maxWidth: '60%'
+
+            });
+
+            text.innerText = properties.banner.content;
+
+            banner.appendChild(text);
+            slide.appendChild(banner);
+        }
 
         slide.classList.add(Slider.slideClassName);
         this.inner.appendChild(slide);
 
         if (this.orbContainer) {
-            const orb   = this.style(document.createElement('div'), {borderColor: this.color});
             const inner = this.style(document.createElement('div'), {backgroundColor: this.color});
+            const orb   = this.style(document.createElement('div'), {borderColor:  this.color});
             orb.onclick = this.next.bind(this, this.inner.children.length - 1);
 
             orb.classList.add(Slider.orbClassName);
@@ -81,7 +116,7 @@ class Slider {
 
         if (first) {
             setTimeout(() => slide.classList.add(Slider.activeSlideClassName), 10);
-            this.__timeout = setTimeout(this.next.bind(this), this.speed * 1000);
+            if (this.auto) this.__timeout = setTimeout(this.next.bind(this), this.speed * 1000);
         }
     }
 
@@ -197,10 +232,10 @@ class Slider {
 
                 margin:        0 0.5rem;
                 border-radius: 100%;
-                opacity:       0.8;
                 border:        2px solid #222;
                 transition:    transform 0.5s ease-in-out;
                 transform:     scale(0);
+                cursor:        pointer;
             }
 
             .${this.orbClassName} .${this.orbInnerClassName} {
@@ -222,11 +257,6 @@ class Slider {
 
             .${this.loadedOrbClassName} {
                 transform: scale(1);
-            }
-
-            .${this.activeOrbClassName} {
-                cursor:         pointer;
-                pointer-events: none;
             }
 
             .${this.activeOrbClassName} .${this.orbInnerClassName} {
