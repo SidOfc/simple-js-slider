@@ -6,22 +6,15 @@ class Slider {
         this.auto          = auto;
         this.currentIndex  = 0;
         this.color         = color[0] === '#' ? color : `#${color}`;
-        this.inner         = document.createElement('div');
-        this.pagerOutside  = pagerOutside;
-        this.sync          = sync;
+        this.inner         = this.style(document.createElement('div'), {bottom: bottom => pagerOutside ? '3rem' : bottom});
 
         this.inner.classList.add(Slider.innerClassName);
         this.container.classList.add(Slider.className);
         this.container.appendChild(this.inner);
-        this.style(this.container, {
-            position:     pos          => pos == 'static' ? 'relative' : pos,
-            marginBottom: marginBottom => pagerOutside    ? '3.5rem'   : marginBottom
-        });
+        this.style(this.container, {position: pos => pos == 'static' ? 'relative' : pos});
 
         if (pager) {
-            this.orbContainer = this.style(document.createElement('div'), {
-                transform: transform => pagerOutside ? 'translate3d(0, calc(100% + 1.75rem), 0)' : transform
-            });
+            this.orbContainer = document.createElement('div');
             this.orbContainer.classList.add(Slider.orbContainerClassName);
             this.container.appendChild(this.orbContainer);
         }
@@ -29,7 +22,7 @@ class Slider {
         images.forEach(settings => {
             const obj  = typeof settings === 'string' ? {url: settings} : settings;
             const img  = new Image();
-            if (this.sync) {
+            if (sync) {
                 this.insert(img, obj);
             } else {
                 img.onload = this.insert.bind(this, img, obj);
@@ -85,11 +78,11 @@ class Slider {
 
             const banner = this.style(document.createElement('div'), {
                 position:  'absolute',
-                bottom:    properties.banner.bottom ? (this.pagerOutside ? '0.9rem' : '3.15rem') : 'auto',
-                top:       properties.banner.bottom ? 'auto'    : '0.9rem',
-                right:     properties.banner.right  ? '1.4rem'  : 'auto',
-                left:      properties.banner.right  ? 'auto'    : '1.4rem',
-                textAlign: properties.banner.right  ? 'right'   : 'left',
+                bottom:    properties.banner.bottom ? '0.9rem' : 'auto',
+                top:       properties.banner.bottom ? 'auto'   : '0.9rem',
+                right:     properties.banner.right  ? '1.4rem' : 'auto',
+                left:      properties.banner.right  ? 'auto'   : '1.4rem',
+                textAlign: properties.banner.right  ? 'right'  : 'left',
                 maxWidth: '60%'
 
             });
